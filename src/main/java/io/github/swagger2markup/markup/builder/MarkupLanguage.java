@@ -17,7 +17,7 @@
  *
  */
 
-package io.github.robwin.markup.builder;
+package io.github.swagger2markup.markup.builder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -27,7 +27,8 @@ import java.util.List;
  */
 public enum MarkupLanguage {
     ASCIIDOC(".adoc,.asciidoc"),
-    MARKDOWN(".md,.markdown");
+    MARKDOWN(".md,.markdown"),
+    CONFLUENCE_MARKUP(".txt");
 
     private final String fileNameExtensions;
 

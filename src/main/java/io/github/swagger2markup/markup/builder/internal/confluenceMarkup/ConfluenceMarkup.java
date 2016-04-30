@@ -16,34 +16,31 @@
  *
  *
  */
-package io.github.robwin.markup.builder.markdown;
+package io.github.swagger2markup.markup.builder.internal.confluenceMarkup;
 
-import io.github.robwin.markup.builder.Markup;
+
+import io.github.swagger2markup.markup.builder.internal.Markup;
 
 /**
  * @author Robert Winkler
  */
-public enum Markdown implements Markup {
-    HARDBREAKS(""),
+public enum ConfluenceMarkup implements Markup {
     TABLE_COLUMN_DELIMITER("|"),
-    TABLE_COLUMN_DELIMITER_ESCAPE("\\|"),
-    TABLE_ROW("-"),
-    LISTING("```"),
-    TITLE("#"),
-    DOCUMENT_TITLE("# "),
-    BOLD("**"),
-    ITALIC("*"),
+    LITERAL("{noformat}"),
+    BOLD("*"),
+    ITALIC("_"),
     LIST_ENTRY("* "),
-    FILE_EXTENSION("md"),
-    SPACE_ESCAPE("-"),
-    LINE_BREAK("  ");
+    ANCHOR_START("{anchor:"),
+    ANCHOR_END("}"),
+    SPACE_ESCAPE("_"),
+    LINE_BREAK("\\\\ ");
 
     private final String markup;
 
     /**
      * @param markup AsciiDoc markup
      */
-    private Markdown(final String markup) {
+    ConfluenceMarkup(final String markup) {
         this.markup = markup;
     }
 

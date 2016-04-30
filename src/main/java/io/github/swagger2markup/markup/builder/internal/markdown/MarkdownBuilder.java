@@ -16,17 +16,21 @@
  *
  *
  */
-package io.github.robwin.markup.builder.markdown;
+package io.github.swagger2markup.markup.builder.internal.markdown;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import io.github.robwin.markup.builder.*;
+import io.github.swagger2markup.markup.builder.*;
+import io.github.swagger2markup.markup.builder.internal.AbstractMarkupDocBuilder;
+import io.github.swagger2markup.markup.builder.internal.Markup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 
-import java.io.IOException;
 import java.io.Reader;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.join;
@@ -36,25 +40,36 @@ import static org.apache.commons.lang3.StringUtils.join;
  */
 public class MarkdownBuilder extends AbstractMarkupDocBuilder {
 
-    public MarkdownBuilder(){
-        super(System.getProperty("line.separator"));
-    }
-
-    public MarkdownBuilder(String lineSeparator){
-        super(lineSeparator);
-    }
+    private static final Pattern TITLE_PATTERN = Pattern.compile(String.format("^(%s{1,%d})\\s+(.*)$", Markdown.TITLE, MAX_TITLE_LEVEL + 1));
 
     private static final Map<MarkupBlockStyle, String> BLOCK_STYLE = new HashMap<MarkupBlockStyle, String>() {{
-        put(MarkupBlockStyle.EXAMPLE, null);
+        put(MarkupBlockStyle.EXAMPLE, "");
         put(MarkupBlockStyle.LISTING, Markdown.LISTING.toString());
         put(MarkupBlockStyle.LITERAL, Markdown.LISTING.toString());
-        put(MarkupBlockStyle.PASSTHROUGH, null);
-        put(MarkupBlockStyle.SIDEBAR, null);
+        put(MarkupBlockStyle.PASSTHROUGH, "");
+        put(MarkupBlockStyle.SIDEBAR, "");
     }};
 
+    public MarkdownBuilder() {
+        super();
+    }
+
+    public MarkdownBuilder(String newLine) {
+        super(newLine);
+    }
+
+    protected MarkupLanguage getMarkupLanguage() {
+        return MarkupLanguage.MARKDOWN;
+    }
+
     @Override
-    public MarkupDocBuilder copy() {
-        return new MarkdownBuilder().withAnchorPrefix(anchorPrefix);
+    public MarkupDocBuilder copy(boolean copyBuffer) {
+        MarkdownBuilder builder = new MarkdownBuilder(newLine);
+
+        if (copyBuffer)
+            builder.documentBuilder = new StringBuilder(this.documentBuilder);
+
+        return builder.withAnchorPrefix(anchorPrefix);
     }
 
     @Override
@@ -64,46 +79,65 @@ public class MarkdownBuilder extends AbstractMarkupDocBuilder {
     }
 
     @Override
+    public MarkupDocBuilder sectionTitleLevel(int level, String title) {
+        sectionTitleLevel(Markdown.TITLE, level, title);
+        return this;
+    }
+    
+    @Override
     public MarkupDocBuilder sectionTitleWithAnchorLevel(int level, String title, String anchor) {
         sectionTitleWithAnchorLevel(Markdown.TITLE, level, title, anchor);
         return this;
     }
 
     @Override
-    public MarkupDocBuilder paragraph(String text) {
-        super.paragraph(text);
+    public MarkupDocBuilder paragraph(String text, boolean hardbreaks) {
+        Validate.notBlank(text, "text must not be blank");
+
+        text = text.trim();
+        if (hardbreaks)
+            text = replaceNewLines(text, Markdown.LINE_BREAK + newLine);
+        else
+            text = replaceNewLines(text);
+        documentBuilder.append(text).append(newLine).append(newLine);
+
         return this;
     }
-
+    
     @Override
     public MarkupDocBuilder block(String text, final MarkupBlockStyle style, String title, MarkupAdmonition admonition) {
         if (admonition != null)
-            documentBuilder.append(StringUtils.capitalize(admonition.name())).append(" : ");
+            documentBuilder.append(StringUtils.capitalize(admonition.name().toLowerCase()));
         if (title != null) {
             if (admonition != null)
                 documentBuilder.append(" | ");
-            documentBuilder.append(title).append(" : ");
+            documentBuilder.append(title);
         }
         if (admonition != null || title != null)
-            documentBuilder.append(newLine);
+            documentBuilder.append(" : ").append(newLine);
 
         delimitedBlockText(new Markup() {
             public String toString() {
-                String separator = BLOCK_STYLE.get(style);
-                return separator;
+                return BLOCK_STYLE.get(style);
             }
         }, text);
         return this;
     }
 
     @Override
-    public MarkupDocBuilder listing(String text, String language) {
+    public MarkupDocBuilder listingBlock(String text, String language) {
         if (language != null)
             text = language + " :" + newLine + text;
         block(text, MarkupBlockStyle.LISTING);
         return this;
     }
 
+    @Override
+    public MarkupDocBuilder literalText(String text) {
+        boldText(Markdown.LITERAL, text);
+        return this;
+    }
+    
     @Override
     public MarkupDocBuilder boldText(String text) {
         boldText(Markdown.BOLD, text);
@@ -125,39 +159,6 @@ public class MarkdownBuilder extends AbstractMarkupDocBuilder {
     @Override
     public MarkupDocBuilder unorderedListItem(String item) {
         unorderedListItem(Markdown.LIST_ENTRY, item);
-        return this;
-    }
-
-    @Override
-    public MarkupDocBuilder tableWithHeaderRow(List<String> rowsInPSV) {
-        String headersInPSV = rowsInPSV.get(0);
-        List<String> contentRowsInPSV = rowsInPSV.subList(1, rowsInPSV.size());
-        String[] headersAsArray = headersInPSV.split(String.format("\\%s", Markdown.TABLE_COLUMN_DELIMITER.toString()));
-        List<String> headers = Arrays.asList(headersAsArray);
-
-        newLine();
-        // Header
-        documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-        documentBuilder.append(headersInPSV);
-        documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-        newLine();
-        // Header/Content separator
-        documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-        for (String header : headers) {
-            for (int i = 1; i < 5; i++) {
-                documentBuilder.append(Markdown.TABLE_ROW);
-            }
-            documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-        }
-        newLine();
-        // Content
-        for (String contentRowInPSV : contentRowsInPSV) {
-            documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-            documentBuilder.append(contentRowInPSV);
-            documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER.toString());
-            newLine();
-        }
-        newLine().newLine();
         return this;
     }
 
@@ -187,35 +188,29 @@ public class MarkdownBuilder extends AbstractMarkupDocBuilder {
         return crossReferenceRaw(document, normalizeAnchor(anchor), text);
     }
 
-    private String escapeTableCell(String cell) {
-        return cell.replace(Markdown.TABLE_COLUMN_DELIMITER.toString(), Markdown.TABLE_COLUMN_DELIMITER_ESCAPE.toString());
+    private String formatTableCell(String cell) {
+        cell = replaceNewLines(cell.trim(), "<br>");
+        return cell.replace(Markdown.TABLE_COLUMN_DELIMITER.toString(), "\\" + Markdown.TABLE_COLUMN_DELIMITER.toString());
     }
 
     @Override
     public MarkupDocBuilder tableWithColumnSpecs(List<MarkupTableColumn> columnSpecs, List<List<String>> cells) {
-        Validate.notEmpty(columnSpecs);
-
+        Validate.notEmpty(cells, "cells must not be null");
         newLine();
-        Collection<String> headerList = Collections2.transform(columnSpecs, new Function<MarkupTableColumn, String>() {
-            public String apply(final MarkupTableColumn header) {
-                return escapeTableCell(defaultString(header.header));
-            }
-        });
-        documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER).append(join(headerList, Markdown.TABLE_COLUMN_DELIMITER.toString())).append(Markdown.TABLE_COLUMN_DELIMITER).append(newLine);
+        if (columnSpecs != null && !columnSpecs.isEmpty()) {
+            Collection<String> headerList = columnSpecs.stream().map(header -> formatTableCell(defaultString(header.header))).collect(Collectors.toList());
+            documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER).append(join(headerList, Markdown.TABLE_COLUMN_DELIMITER.toString())).append(Markdown.TABLE_COLUMN_DELIMITER).append(newLine);
 
-        documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER);
-        for (MarkupTableColumn col : columnSpecs) {
-            documentBuilder.append(StringUtils.repeat(Markdown.TABLE_ROW.toString(), 3));
             documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER);
+            columnSpecs.forEach(col -> {
+                documentBuilder.append(StringUtils.repeat(Markdown.TABLE_ROW.toString(), 3));
+                documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER);
+            });
+            documentBuilder.append(newLine);
         }
-        documentBuilder.append(newLine);
 
         for (List<String> row : cells) {
-            Collection<String> cellList = Collections2.transform(row, new Function<String, String>() {
-                public String apply(final String cell) {
-                    return escapeTableCell(cell);
-                }
-            });
+            Collection<String> cellList = row.stream().map(cell -> formatTableCell(defaultString(cell))).collect(Collectors.toList());
             documentBuilder.append(Markdown.TABLE_COLUMN_DELIMITER).append(join(cellList, Markdown.TABLE_COLUMN_DELIMITER.toString())).append(Markdown.TABLE_COLUMN_DELIMITER).append(newLine);
         }
         newLine();
@@ -230,13 +225,13 @@ public class MarkdownBuilder extends AbstractMarkupDocBuilder {
     }
 
     @Override
-    public MarkupDocBuilder importMarkup(Reader markupText, int levelOffset) throws IOException {
-        importMarkup(Markdown.TITLE, markupText, levelOffset);
+    public MarkupDocBuilder importMarkup(Reader markupText, MarkupLanguage markupLanguage, int levelOffset) {
+        importMarkupStyle1(TITLE_PATTERN, Markdown.TITLE, markupText, markupLanguage, levelOffset);
         return this;
     }
 
     @Override
     public String addFileExtension(String fileName) {
-        return addFileExtension(Markdown.FILE_EXTENSION, fileName);
+        return fileName + MarkupLanguage.MARKDOWN.getFileNameExtensions().get(0);
     }
 }

@@ -3,7 +3,7 @@
 :version: 0.1.5
 :hardbreaks:
 
-image:https://travis-ci.org/Swagger2Markup/markup-document-builder.svg?branch=master["Build Status", link="https://travis-ci.org/Swagger2Markup/markup-document-builder"] image:https://coveralls.io/repos/Swagger2Markup/markup-document-builder/badge.svg["Coverage Status", link="https://coveralls.io/r/Swagger2Markup/markup-document-builder"] image:https://api.bintray.com/packages/robwin/maven/markup-document-builder/images/download.svg[link="https://bintray.com/robwin/maven/markup-document-builder/_latestVersion"] image:http://img.shields.io/badge/license-ASF2-blue.svg["Apache License 2", link="http://www.apache.org/licenses/LICENSE-2.0.txt"] image:https://img.shields.io/badge/Twitter-rbrtwnklr-blue.svg["Twitter", link="https://twitter.com/rbrtwnklr"]
+image:https://travis-ci.org/Swagger2Markup/markup-document-builder.svg?branch=master["Build Status", link="https://travis-ci.org/Swagger2Markup/markup-document-builder"] image:https://coveralls.io/repos/Swagger2Markup/markup-document-builder/badge.svg["Coverage Status", link="https://coveralls.io/r/Swagger2Markup/markup-document-builder"] image:https://api.codacy.com/project/badge/grade/c56a372454164f21b1b2eec8eb48b370["Codacy code quality", link="https://www.codacy.com/app/robwin/markup-document-builder"] image:https://api.bintray.com/packages/swagger2markup/Maven/markup-document-builder/images/download.svg[link="https://bintray.com/swagger2markup/Maven/markup-document-builder/_latestVersion"] image:http://img.shields.io/badge/license-ASF2-blue.svg["Apache License 2", link="http://www.apache.org/licenses/LICENSE-2.0.txt"] image:https://img.shields.io/badge/Twitter-rbrtwnklr-blue.svg["Twitter", link="https://twitter.com/rbrtwnklr"]
 
 == Overview
 
@@ -17,7 +17,7 @@ The project is published in JCenter and Maven Central.
 
 ==== Maven
 
-[source,xml]
+[source,xml, subs="specialcharacters,attributes"]
 ----
 <repositories>
     <repository>
@@ -33,19 +33,19 @@ The project is published in JCenter and Maven Central.
 <dependency>
     <groupId>io.github.robwin</groupId>
     <artifactId>markup-document-builder</artifactId>
-    <version>0.1.5</version>
+    <version>{version}</version>
 </dependency>
 ----
 
 ==== Gradle
 
-[source,groovy]
+[source,groovy, subs="attributes"]
 ----
 repositories {
     jcenter()
 }
 
-compile "io.github.robwin:markup-document-builder:0.1.5"
+compile "io.github.robwin:markup-document-builder:{version}"
 ----
 
 === Using MarkupDocBuilder
